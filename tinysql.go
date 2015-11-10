@@ -1,18 +1,39 @@
 package tinysql
 
 import (
-	"os"
 	"fmt"
+	"errors"
 )
 
-var DbEntity *DB
+var DbEntities map[string]*DB
+
+//  注册数据库连接
+func RegisterDBConn(connName string,connString string,driver string) bool{
+	fmt.Println("register db conn")
+	_,ok := DbEntities[connName]
+	if ok {
+		fmt.Println("db conn already exist")
+		return false
+	}
+	db,err := initDB(driver,connString)
+	if err != nil {
+		fmt.Println(err.Error())
+		return false
+	}
+	DbEntities[connName] = db
+	fmt.Println(len(DbEntities))
+	return true
+}
+
+//  获取数据库连接
+func GetDBConn(connName string) (*DB,error){
+	db,ok := DbEntities[connName]
+	if ok {
+		return db,nil
+	}
+	return nil,errors.New("db conn not found!")
+}
 
 func init(){
-	var err error
-	loadConfig()
-	DbEntity,err = initDB()
-	if err != nil{
-		fmt.Printf("db init failed")
-		os.Exit(2)
-	}
+	DbEntities = make(map[string]*DB)
 }
