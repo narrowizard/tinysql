@@ -12,7 +12,7 @@ func RegisterDBConn(connName string,connString string,driver string) bool{
 	fmt.Println("register db conn")
 	_,ok := DbEntities[connName]
 	if ok {
-		fmt.Println("db conn already exist")
+		fmt.Println("[tinysql] db conn already exist")
 		return false
 	}
 	db,err := initDB(driver,connString)
@@ -31,7 +31,7 @@ func GetDBConn(connName string) (*DB,error){
 	if ok {
 		return db,nil
 	}
-	return nil,errors.New("db conn not found!")
+	return nil,errors.New("[tinysql] db conn not found!")
 }
 
 func init(){

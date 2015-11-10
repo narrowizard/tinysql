@@ -11,15 +11,19 @@ import(
 	"reflect"
 )
 
-type IDbHelper interface{
-	//查询
-	Query(sql string) *sql.Rows
-	//插入
-	Insert(sql string) int
-	//更新
-	Update(sql string) int
-	//删除
-	Delete(sql string) int
+type IQueryBuilder interface{
+	//获取数据
+	ToData() *[]interface{}
+	
+	SingleOrDefault() *interface{}
+	//增加Where条件
+	Where(col string,val interface{}) *DB
+	//查询sql语句
+	Query(sql string) *DB
+	//
+	From(table string) *DB
+	
+	Select(columns string) *DB
 }
 
 type Count struct{
@@ -35,14 +39,19 @@ type DB struct{
 	err []error
 }
 
+//支持逗号分隔的多个表
 func (this *DB) From(table string) *DB{
 	if strings.Trim(table," ") == "" {
 		return this
 	}
-	this.from = append(this.from,table)
+	t := strings.Split(table,",")
+	if len(t) == 0 {
+		return this
+	}
+	this.from = append(this.from,t...)
 	return this
 }
-
+//支持逗号分隔的多个列
 func (this *DB) Select(columns string) *DB{
 	s := strings.Split(columns,",")
 	if len(s) == 0{
@@ -76,7 +85,7 @@ func (this *DB) Get(model interface{}) *DB{
 	if len(this.constraint) != 0{
 		sql += " where "
 		for k,v := range this.constraint{
-			sql += (k + "=? and ")
+			sql += (k + "? and ")
 			params = append(params,v)
 		}
 		sql = sql[:len(sql) - 4]
@@ -93,6 +102,10 @@ func (this *DB) Get(model interface{}) *DB{
 }
 
 func (this *DB) Where(key string,value interface{})(*DB){
+	ext := strings.ContainsAny(key,"<=>")
+	if !ext{
+		key = key + "="
+	}
 	this.constraint[key] = value
 	return this
 }
