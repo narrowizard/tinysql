@@ -199,7 +199,7 @@ func (this *builder) Insert(table string, model interface{}) int64 {
 	var result sql.Result
 	var err error
 	this.reset()
-	result, err = this.Exec(query, params...)
+	result, err = this.db.Exec(query, params...)
 	if err != nil {
 		return -1
 	}
