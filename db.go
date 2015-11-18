@@ -1,9 +1,6 @@
 package tinysql
 
-import (
-	"database/sql"
-	"reflect"
-)
+import "database/sql"
 
 // 数据库链接
 type DB struct {
@@ -55,34 +52,4 @@ func (this *DB) Commit() error {
 func (this *DB) Rollback() error {
 	this.autoCommit = true
 	return this.tx.Rollback()
-}
-
-//向指定table插入数据
-func (this *DB) Insert(table string, model interface{}) int64 {
-	query := "insert into " + table
-	value := reflect.ValueOf(model).Elem()
-	data := make(map[string]interface{})
-	mapStructToMap(value, data)
-	keys := " ("
-	values := " ("
-	params := make([]interface{}, 0, 0)
-	for k, v := range data {
-		keys += k + ","
-		values += "?,"
-		params = append(params, v)
-	}
-	query += keys[:len(keys)-1] + ") values"
-	query += values[:len(values)-1] + ")"
-	var result sql.Result
-	var err error
-	result, err = this.Exec(query, params...)
-	if err != nil {
-		return -1
-	}
-	var id int64
-	id, err = result.LastInsertId()
-	if err != nil {
-		return -1
-	}
-	return id
 }
