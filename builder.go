@@ -183,15 +183,58 @@ func (this *builder) Update(table string) int64 {
 	if len(this.set) == 0 || strings.Trim(table, " ") == "" {
 		return -1
 	}
-	var query = "update " + table + " set "
+	var sql = "update " + table + " set "
 	var params = make([]interface{}, 0, 0)
 	for k, v := range this.set {
-		query += (k + "=?,")
+		sql += (k + "=?,")
 		params = append(params, v)
 	}
-	query = query[:len(query)-1]
+	sql = sql[:len(sql)-1]
+	if len(this.whereCondition) != 0 {
+		sql += " where "
+		var isFirst = true
+		for k, v := range this.whereCondition {
+			//where group
+			if v.extCharPosition == 1 {
+				sql += " "
+				sql += strings.Repeat("(", v.extChar)
+			}
+			if v.isOr {
+				if !isFirst {
+					sql += " or "
+				} else {
+					isFirst = false
+				}
+
+			} else {
+				if !isFirst {
+					sql += " and "
+				} else {
+					isFirst = false
+				}
+			}
+			if v.multiValue {
+				sql += (k + " in (")
+				sql += strings.Repeat("?,", len(v.values))
+				sql = sql[:len(sql)-1]
+				sql += (") ")
+				params = append(params, v.values...)
+			} else {
+				sql += (k + "? ")
+				params = append(params, v.value)
+			}
+			// where group
+			if v.extCharPosition == 2 {
+				sql += " "
+				sql += strings.Repeat(")", v.extChar)
+			}
+		}
+		if this.groupEnd != 0 {
+			sql += strings.Repeat(")", this.groupEnd)
+		}
+	}
 	this.reset()
-	var result, err = this.db.Exec(query, params...)
+	var result, err = this.db.Exec(sql, params...)
 	if err != nil {
 		return -1
 	}
