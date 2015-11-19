@@ -3,6 +3,7 @@ package tinysql
 import (
 	"database/sql"
 	"reflect"
+	"strconv"
 	"strings"
 )
 
@@ -46,6 +47,12 @@ func (this *builder) reset() {
 	this.whereCondition = make(map[string]whereConstraint)
 	this.join = make(map[string]string)
 	this.set = make(map[string]interface{})
+}
+
+func (this *builder) OrderBy(column string) *builder {
+	var cols = strings.Split(column, ",")
+	this.orderby = append(this.orderby, cols...)
+	return this
 }
 
 // toSql 生成sql语句
@@ -129,6 +136,22 @@ func (this *builder) toQuerySql() (string, []interface{}) {
 	if this.groupEnd != 0 {
 		sql += strings.Repeat(")", this.groupEnd)
 	}
+	//order by
+	if len(this.orderby) != 0 {
+		sql += " order by "
+		for i := 0; i < len(this.orderby); i++ {
+			sql += this.orderby[i] + ","
+		}
+		sql = sql[:len(sql)-1]
+	}
+	//limit
+	if this.limit != 0 {
+		sql += " limit "
+		sql += strconv.Itoa(this.offset)
+		sql += ","
+		sql += strconv.Itoa(this.limit)
+	}
+
 	return sql, params
 }
 
@@ -178,6 +201,13 @@ func (this *builder) Update(table string) int64 {
 		return -1
 	}
 	return c
+}
+
+// InsertModel 插入数据,表名即为model struct的名称
+func (this *builder) InsertModel(model interface{}) int64 {
+	var v = reflect.TypeOf(model)
+	var table = transFieldName(v.Name())
+	return this.Insert(table, model)
 }
 
 // Insert 向指定table插入数据
