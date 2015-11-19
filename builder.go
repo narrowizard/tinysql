@@ -248,7 +248,7 @@ func (this *builder) Update(table string) int64 {
 
 // InsertModel 插入数据,表名即为model struct的名称
 func (this *builder) InsertModel(model interface{}) int64 {
-	var v = reflect.TypeOf(model)
+	var v = reflect.TypeOf(model).Elem()
 	var table = transFieldName(v.Name())
 	return this.Insert(table, model)
 }
