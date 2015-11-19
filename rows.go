@@ -96,8 +96,10 @@ func (this *Rows) parse(value reflect.Value, index int, fields []interface{}) er
 								//如果为空,则使用字段名
 								fieldName = transFieldName(fieldType.Name)
 							}
-							var index = this.columns[fieldName]
-							this.parse(fieldValue, index, fields)
+							var index, ok = this.columns[fieldName]
+							if ok {
+								this.parse(fieldValue, index, fields)
+							}
 						}
 					}
 				}
