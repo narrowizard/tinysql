@@ -51,6 +51,9 @@ func (this *builder) reset() {
 
 func (this *builder) OrderBy(column string) *builder {
 	var cols = strings.Split(column, ",")
+	for i := 0; i < len(cols); i++ {
+		cols[i] = "`" + cols[i] + "`"
+	}
 	this.orderby = append(this.orderby, cols...)
 	return this
 }
@@ -183,7 +186,7 @@ func (this *builder) Update(table string) int64 {
 	if len(this.set) == 0 || strings.Trim(table, " ") == "" {
 		return -1
 	}
-	var sql = "update " + table + " set "
+	var sql = "update `" + table + "` set "
 	var params = make([]interface{}, 0, 0)
 	for k, v := range this.set {
 		sql += (k + "=?,")
@@ -255,7 +258,7 @@ func (this *builder) InsertModel(model interface{}) int64 {
 
 // Insert 向指定table插入数据
 func (this *builder) Insert(table string, model interface{}) int64 {
-	query := "insert into " + table
+	query := "insert into `" + table + "`"
 	value := reflect.ValueOf(model).Elem()
 	data := make(map[string]interface{})
 	mapStructToMap(value, data)
@@ -263,7 +266,7 @@ func (this *builder) Insert(table string, model interface{}) int64 {
 	values := " ("
 	params := make([]interface{}, 0, 0)
 	for k, v := range data {
-		keys += k + ","
+		keys += "`" + k + "`,"
 		values += "?,"
 		params = append(params, v)
 	}
@@ -289,6 +292,7 @@ func (this *builder) Set(key string, value interface{}) *builder {
 	if strings.Trim(key, " ") == "" {
 		return this
 	}
+	key = "`" + key + "`"
 	this.set[key] = value
 	return this
 }
@@ -355,6 +359,9 @@ func (this *builder) From(table string) *builder {
 	if len(t) == 0 {
 		return this
 	}
+	for i := 0; i < len(t); i++ {
+		t[i] = "`" + t[i] + "`"
+	}
 	this.from = append(this.from, t...)
 	return this
 }
@@ -376,6 +383,7 @@ func (this *builder) SelectSum(col string) *builder {
 }
 
 func (this *builder) Join(table string, condition string) *builder {
+	table = "`" + table + "`"
 	this.join[table] = condition
 	return this
 }
@@ -400,6 +408,12 @@ func (this *builder) Select(columns string) *builder {
 	s := strings.Split(columns, ",")
 	if len(s) == 0 {
 		return this
+	}
+	for i := 0; i < len(s); i++ {
+		if s[i] == "*" {
+			continue
+		}
+		s[i] = "`" + s[i] + "`"
 	}
 	this.columns = append(this.columns, s...)
 	return this
@@ -431,14 +445,19 @@ func (this *builder) maxMinAvgSum(col string, t string) *builder {
 	if strings.Trim(col, " ") == "" {
 		return this
 	}
-	this.columns = append(this.columns, t+"("+col+")")
+	this.columns = append(this.columns, t+"(`"+col+"`)")
 	return this
 }
 
 func (this *builder) where(key string, val interface{}, t string) *builder {
 	ext := strings.ContainsAny(key, "<=>")
-	if !ext {
-		key = key + "="
+	if ext {
+		var p = strings.IndexAny(key, "<=>")
+		var keyName = key[:p]
+		var symbol = key[p:]
+		key = "`" + keyName + "`" + symbol
+	} else {
+		key = "`" + key + "`="
 	}
 	var aa = new(whereConstraint)
 	if strings.ToUpper(t) == "OR" {
@@ -485,6 +504,7 @@ func (this *builder) whereIn(key string, val []interface{}, t string) *builder {
 	} else {
 		aa.extCharPosition = 0
 	}
+	key = "`" + key + "`"
 	this.whereCondition[key] = *aa
 	return this
 }
