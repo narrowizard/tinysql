@@ -166,7 +166,7 @@ func (this *builder) Query() *Rows {
 }
 
 // Delete 执行删除方法,返回影响行数
-func (this *builder) Delete() int64 {
+func (this *builder) Delete() int {
 	var sql, params = this.toDeleteSql()
 	this.reset()
 	var res, err = this.db.Exec(sql, params)
@@ -178,11 +178,11 @@ func (this *builder) Delete() int64 {
 	if err != nil {
 		return -1
 	}
-	return c
+	return int(c)
 }
 
 // Update 执行更新方法,返回影响行数
-func (this *builder) Update(table string) int64 {
+func (this *builder) Update(table string) int {
 	if len(this.set) == 0 || strings.Trim(table, " ") == "" {
 		return -1
 	}
@@ -246,18 +246,18 @@ func (this *builder) Update(table string) int64 {
 	if err != nil {
 		return -1
 	}
-	return c
+	return int(c)
 }
 
 // InsertModel 插入数据,表名即为model struct的名称
-func (this *builder) InsertModel(model interface{}) int64 {
+func (this *builder) InsertModel(model interface{}) int {
 	var v = reflect.TypeOf(model).Elem()
 	var table = transFieldName(v.Name())
 	return this.Insert(table, model)
 }
 
 // Insert 向指定table插入数据
-func (this *builder) Insert(table string, model interface{}) int64 {
+func (this *builder) Insert(table string, model interface{}) int {
 	query := "insert into `" + table + "`"
 	value := reflect.ValueOf(model).Elem()
 	data := make(map[string]interface{})
@@ -284,7 +284,7 @@ func (this *builder) Insert(table string, model interface{}) int64 {
 	if err != nil {
 		return -1
 	}
-	return id
+	return int(id)
 }
 
 // Set 为Update设置值
@@ -363,6 +363,11 @@ func (this *builder) From(table string) *builder {
 		t[i] = "`" + t[i] + "`"
 	}
 	this.from = append(this.from, t...)
+	return this
+}
+
+func (this *builder) SelectCount(col string) *builder {
+	this.columns = append(this.columns, "count(`"+col+"`)")
 	return this
 }
 
