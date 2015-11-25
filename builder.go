@@ -367,7 +367,13 @@ func (this *builder) From(table string) *builder {
 }
 
 func (this *builder) SelectCount(col string) *builder {
-	this.columns = append(this.columns, "count(`"+col+"`)")
+	if col == "*" {
+		this.columns = append(this.columns, "count(*)")
+	} else if strings.Trim(col, " ") == "" {
+		this.columns = append(this.columns, "count(1)")
+	} else {
+		this.columns = append(this.columns, "count(`"+col+"`)")
+	}
 	return this
 }
 
