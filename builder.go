@@ -491,7 +491,7 @@ func (this *builder) Select(columns string) *builder {
 			}
 			alias[0] = alias[0][:len(alias[0])-1]
 		}
-		s[i] = "`" + alias[0] + "`"
+		s[i] = alias[0]
 		if len(alias) > 1 {
 			for j := 1; j < len(alias); j++ {
 				s[i] += (" " + alias[j])
