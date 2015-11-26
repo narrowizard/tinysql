@@ -384,7 +384,7 @@ func (this *builder) From(table string) *builder {
 		t[i] = "`" + alias[0] + "`"
 		if len(alias) > 1 {
 			for j := 1; j < len(alias); j++ {
-				t[i] += alias[j]
+				t[i] += (" " + alias[j])
 			}
 		}
 	}
@@ -417,7 +417,14 @@ func (this *builder) SelectCount(col string) *builder {
 	} else if strings.Trim(col, " ") == "" {
 		this.columns = append(this.columns, "count(1)")
 	} else {
-		this.columns = append(this.columns, "count(`"+col+"`)")
+		if strings.Contains(col, ".") {
+			var df = strings.Split(col, ".")
+			col = ""
+			for j := 0; j < len(df); j++ {
+				col += "`" + df[j] + "`" + "."
+			}
+		}
+		this.columns = append(this.columns, "count(`"+col[:len(col)-1]+"`)")
 	}
 	return this
 }
@@ -443,7 +450,7 @@ func (this *builder) Join(table string, condition string) *builder {
 	table = "`" + alias[0] + "`"
 	if len(alias) > 1 {
 		for j := 1; j < len(alias); j++ {
-			table += alias[j]
+			table += (" " + alias[j])
 		}
 	}
 	this.join[table] = condition
@@ -480,7 +487,7 @@ func (this *builder) Select(columns string) *builder {
 		s[i] = "`" + alias[0] + "`"
 		if len(alias) > 1 {
 			for j := 1; j < len(alias); j++ {
-				s[i] += alias[j]
+				s[i] += (" " + alias[j])
 			}
 		}
 	}
