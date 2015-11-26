@@ -38,14 +38,17 @@ type builder struct {
 	db             *DB
 }
 
+// Begin 开始一个事务,在调用Commit或者Rollback之前的所有sql操作会被绑定在同一个数据库连接
 func (this *builder) Begin() bool {
 	return this.db.begin()
 }
 
+// Commit 提交事务,如果在commit的时候产生错误(通常是由于连接被断开),数据库将自动执行rollback
 func (this *builder) Commit() error {
 	return this.db.commit()
 }
 
+// Rollback 回滚事务
 func (this *builder) Rollback() error {
 	return this.db.rollback()
 }
@@ -377,7 +380,13 @@ func (this *builder) From(table string) *builder {
 		return this
 	}
 	for i := 0; i < len(t); i++ {
-		t[i] = "`" + t[i] + "`"
+		var alias = strings.Split(t[i], " ")
+		t[i] = "`" + alias[0] + "`"
+		if len(alias) > 1 {
+			for j := 1; j < len(alias); j++ {
+				t[i] += alias[j]
+			}
+		}
 	}
 	this.from = append(this.from, t...)
 	return this
@@ -401,6 +410,7 @@ func (this *builder) Count(reset bool) int {
 	return c.C
 }
 
+// SelectCount 搜索某个字段的Count值
 func (this *builder) SelectCount(col string) *builder {
 	if col == "*" {
 		this.columns = append(this.columns, "count(*)")
@@ -429,7 +439,13 @@ func (this *builder) SelectSum(col string) *builder {
 }
 
 func (this *builder) Join(table string, condition string) *builder {
-	table = "`" + table + "`"
+	var alias = strings.Split(table, " ")
+	table = "`" + alias[0] + "`"
+	if len(alias) > 1 {
+		for j := 1; j < len(alias); j++ {
+			table += alias[j]
+		}
+	}
 	this.join[table] = condition
 	return this
 }
@@ -459,7 +475,14 @@ func (this *builder) Select(columns string) *builder {
 		if s[i] == "*" {
 			continue
 		}
-		s[i] = "`" + s[i] + "`"
+		var alias = strings.Split(s[i], " ")
+
+		s[i] = "`" + alias[0] + "`"
+		if len(alias) > 1 {
+			for j := 1; j < len(alias); j++ {
+				s[i] += alias[j]
+			}
+		}
 	}
 	this.columns = append(this.columns, s...)
 	return this
@@ -501,9 +524,22 @@ func (this *builder) where(key string, val interface{}, t string) *builder {
 		var p = strings.IndexAny(key, "<=>")
 		var keyName = key[:p]
 		var symbol = key[p:]
-		key = "`" + keyName + "`" + symbol
+		//处理限定,如database.table.column
+		var df = strings.Split(keyName, ".")
+		key = ""
+		for j := 0; j < len(df); j++ {
+			key += "`" + df[j] + "`" + "."
+		}
+
+		key = key[:len(key)-1] + symbol
 	} else {
-		key = "`" + key + "`="
+		//处理限定,如database.table.column
+		var df = strings.Split(key, ".")
+		key = ""
+		for j := 0; j < len(df); j++ {
+			key += "`" + df[j] + "`" + "."
+		}
+		key = key[:len(key)-1] + "="
 	}
 	var aa = new(whereConstraint)
 	if strings.ToUpper(t) == "OR" {
@@ -550,7 +586,15 @@ func (this *builder) whereIn(key string, val []interface{}, t string) *builder {
 	} else {
 		aa.extCharPosition = 0
 	}
-	key = "`" + key + "`"
+	//处理限定,如database.table.column
+
+	var df = strings.Split(key, ".")
+	key = ""
+	for j := 0; j < len(df); j++ {
+		key += "`" + df[j] + "`" + "."
+	}
+	key = key[:len(key)-1]
+
 	this.whereCondition[key] = *aa
 	return this
 }

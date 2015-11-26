@@ -1,6 +1,9 @@
 package tinysql
 
-import "database/sql"
+import (
+	"database/sql"
+	"errors"
+)
 
 // 数据库链接
 type DB struct {
@@ -44,12 +47,18 @@ func (this *DB) begin() bool {
 
 // Commit 提交事务
 func (this *DB) commit() error {
+	if this.autoCommit == true {
+		return errors.New("there's no transaction begun")
+	}
 	this.autoCommit = true
 	return this.tx.Commit()
 }
 
-// Rollback 回滚失误
+// Rollback 回滚事务
 func (this *DB) rollback() error {
+	if this.autoCommit == true {
+		return errors.New("this's no transaction begun")
+	}
 	this.autoCommit = true
 	return this.tx.Rollback()
 }
