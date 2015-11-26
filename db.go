@@ -32,7 +32,7 @@ func (this *DB) Exec(sql string, params ...interface{}) (sql.Result, error) {
 }
 
 // Begin 开始事务
-func (this *DB) Begin() bool {
+func (this *DB) begin() bool {
 	var err error
 	this.tx, err = this.db.Begin()
 	this.autoCommit = false
@@ -43,13 +43,13 @@ func (this *DB) Begin() bool {
 }
 
 // Commit 提交事务
-func (this *DB) Commit() error {
+func (this *DB) commit() error {
 	this.autoCommit = true
 	return this.tx.Commit()
 }
 
 // Rollback 回滚失误
-func (this *DB) Rollback() error {
+func (this *DB) rollback() error {
 	this.autoCommit = true
 	return this.tx.Rollback()
 }

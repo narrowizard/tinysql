@@ -38,6 +38,18 @@ type builder struct {
 	db             *DB
 }
 
+func (this *builder) Begin() bool {
+	return this.db.begin()
+}
+
+func (this *builder) Commit() error {
+	return this.db.commit()
+}
+
+func (this *builder) Rollback() error {
+	return this.db.rollback()
+}
+
 func (this *builder) reset() {
 	this.from = this.from[:0]
 	this.columns = this.columns[:0]
