@@ -3,9 +3,14 @@ package tinysql
 import (
 	"database/sql"
 	"reflect"
+	"regexp"
 	"strconv"
 	"strings"
 )
+
+type countModel struct {
+	C int
+}
 
 type whereConstraint struct {
 	multiValue      bool
@@ -364,6 +369,24 @@ func (this *builder) From(table string) *builder {
 	}
 	this.from = append(this.from, t...)
 	return this
+}
+
+// Count 返回符合条件的结果数量
+// @param reset 查询完成后是否重置
+func (this *builder) Count(reset bool) int {
+	var temp = this.columns
+	this.columns = []string{"count(*) as c"}
+	var c countModel
+	var sql, params = this.toQuerySql()
+	//去掉limit
+	var aa, _ = regexp.Compile("limit \\d+,\\d+")
+	sql = aa.ReplaceAllString(sql, "")
+	this.db.Query(sql, params...).Scan(&c)
+	this.columns = temp
+	if reset {
+		this.reset()
+	}
+	return c.C
 }
 
 func (this *builder) SelectCount(col string) *builder {
