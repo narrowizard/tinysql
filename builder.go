@@ -483,7 +483,14 @@ func (this *builder) Select(columns string) *builder {
 			continue
 		}
 		var alias = strings.Split(s[i], " ")
-
+		if strings.Contains(alias[0], ".") {
+			var df = strings.Split(alias[0], ".")
+			alias[0] = ""
+			for j := 0; j < len(df); j++ {
+				alias[0] += "`" + df[j] + "`" + "."
+			}
+			alias[0] = alias[0][:len(alias[0])-1]
+		}
 		s[i] = "`" + alias[0] + "`"
 		if len(alias) > 1 {
 			for j := 1; j < len(alias); j++ {
