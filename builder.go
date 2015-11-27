@@ -2,6 +2,7 @@ package tinysql
 
 import (
 	"database/sql"
+	"fmt"
 	"reflect"
 	"regexp"
 	"strconv"
@@ -174,7 +175,7 @@ func (this *builder) toQuerySql() (string, []interface{}) {
 		sql += ","
 		sql += strconv.Itoa(this.limit)
 	}
-
+	fmt.Println("[TinySql]", sql)
 	return sql, params
 }
 
@@ -579,6 +580,9 @@ func addDelimiter(s string, t int) string {
 			var segments = strings.Split(s, ".")
 			s = ""
 			for i := 0; i < len(segments); i++ {
+				if segments[i] == "*" {
+					s += segments[i]
+				}
 				s += "`" + segments[i] + "`" + "."
 			}
 			return s[:len(s)-1]
