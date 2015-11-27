@@ -470,21 +470,7 @@ func (this *builder) Select(columns string) *builder {
 		if s[i] == "*" {
 			continue
 		}
-		var alias = strings.Split(s[i], " ")
-		if strings.Contains(alias[0], ".") {
-			var df = strings.Split(alias[0], ".")
-			alias[0] = ""
-			for j := 0; j < len(df); j++ {
-				alias[0] += "`" + df[j] + "`" + "."
-			}
-			alias[0] = alias[0][:len(alias[0])-1]
-		}
-		s[i] = alias[0]
-		if len(alias) > 1 {
-			for j := 1; j < len(alias); j++ {
-				s[i] += (" " + alias[j])
-			}
-		}
+		s[i] = addDelimiter(s[i], 3)
 	}
 	this.columns = append(this.columns, s...)
 	return this
@@ -601,6 +587,15 @@ func addDelimiter(s string, t int) string {
 		{
 			var segments = strings.Split(s, " ")
 			s = "`" + segments[0] + "`"
+			for i := 1; i < len(segments); i++ {
+				s += " " + segments[i]
+			}
+			return s
+		}
+	case 3:
+		{
+			var segments = strings.Split(s, " ")
+			s = addDelimiter(segments[0], 1)
 			for i := 1; i < len(segments); i++ {
 				s += " " + segments[i]
 			}
