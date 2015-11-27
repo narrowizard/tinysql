@@ -368,6 +368,7 @@ func (this *builder) toDeleteSql() (string, []interface{}) {
 	if this.groupEnd != 0 {
 		sql += strings.Repeat(")", this.groupEnd)
 	}
+	fmt.Println("[TinySql]", sql)
 	return sql, params
 }
 
@@ -582,6 +583,7 @@ func addDelimiter(s string, t int) string {
 			for i := 0; i < len(segments); i++ {
 				if segments[i] == "*" {
 					s += segments[i]
+					continue
 				}
 				s += "`" + segments[i] + "`" + "."
 			}
