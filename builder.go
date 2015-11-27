@@ -72,7 +72,7 @@ func (this *builder) reset() {
 func (this *builder) OrderBy(column string) *builder {
 	var cols = strings.Split(column, ",")
 	for i := 0; i < len(cols); i++ {
-		cols[i] = "`" + cols[i] + "`"
+		cols[i] = addDelimiter(cols[i], 2)
 	}
 	this.orderby = append(this.orderby, cols...)
 	return this
@@ -380,13 +380,7 @@ func (this *builder) From(table string) *builder {
 		return this
 	}
 	for i := 0; i < len(t); i++ {
-		var alias = strings.Split(t[i], " ")
-		t[i] = "`" + alias[0] + "`"
-		if len(alias) > 1 {
-			for j := 1; j < len(alias); j++ {
-				t[i] += (" " + alias[j])
-			}
-		}
+		t[i] = addDelimiter(t[i], 2)
 	}
 	this.from = append(this.from, t...)
 	return this
@@ -446,13 +440,7 @@ func (this *builder) SelectSum(col string) *builder {
 }
 
 func (this *builder) Join(table string, condition string) *builder {
-	var alias = strings.Split(table, " ")
-	table = "`" + alias[0] + "`"
-	if len(alias) > 1 {
-		for j := 1; j < len(alias); j++ {
-			table += (" " + alias[j])
-		}
-	}
+	table = addDelimiter(table, 2)
 	this.join[table] = condition
 	return this
 }
@@ -539,21 +527,10 @@ func (this *builder) where(key string, val interface{}, t string) *builder {
 		var keyName = key[:p]
 		var symbol = key[p:]
 		//处理限定,如database.table.column
-		var df = strings.Split(keyName, ".")
-		key = ""
-		for j := 0; j < len(df); j++ {
-			key += "`" + df[j] + "`" + "."
-		}
-
-		key = key[:len(key)-1] + symbol
+		key = addDelimiter(keyName, 1) + symbol
 	} else {
 		//处理限定,如database.table.column
-		var df = strings.Split(key, ".")
-		key = ""
-		for j := 0; j < len(df); j++ {
-			key += "`" + df[j] + "`" + "."
-		}
-		key = key[:len(key)-1] + "="
+		key = addDelimiter(key, 1) + "="
 	}
 	var aa = new(whereConstraint)
 	if strings.ToUpper(t) == "OR" {
@@ -602,15 +579,36 @@ func (this *builder) whereIn(key string, val []interface{}, t string) *builder {
 	}
 	//处理限定,如database.table.column
 
-	var df = strings.Split(key, ".")
-	key = ""
-	for j := 0; j < len(df); j++ {
-		key += "`" + df[j] + "`" + "."
-	}
-	key = key[:len(key)-1]
-
+	key = addDelimiter(key, 1)
 	this.whereCondition[key] = *aa
 	return this
+}
+
+// addDelimiter 添加限定符(表名,列明)
+// @param t 添加类型,1 database.table.column 2 table as alias
+func addDelimiter(s string, t int) string {
+	switch t {
+	case 1:
+		{
+			var segments = strings.Split(s, ".")
+			s = ""
+			for i := 0; i < len(segments); i++ {
+				s += "`" + segments[i] + "`" + "."
+			}
+			return s[:len(s)-1]
+		}
+	case 2:
+		{
+			var segments = strings.Split(s, " ")
+			s = "`" + segments[0] + "`"
+			for i := 1; i < len(segments); i++ {
+				s += " " + segments[i]
+			}
+			return s
+		}
+	default:
+		return s
+	}
 }
 
 // mapStructToMap 将一个结构体所有字段(包括通过组合得来的字段)到一个map中
