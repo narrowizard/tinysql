@@ -582,7 +582,7 @@ func addDelimiter(s string, t int) string {
 			s = ""
 			for i := 0; i < len(segments); i++ {
 				if segments[i] == "*" {
-					s += segments[i]
+					s += segments[i] + "."
 					continue
 				}
 				s += "`" + segments[i] + "`" + "."
