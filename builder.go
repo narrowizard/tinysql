@@ -71,6 +71,9 @@ func (this *builder) reset() {
 }
 
 func (this *builder) OrderBy(column string) *builder {
+	if strings.Trim(column, " ") == "" {
+		return this
+	}
 	var cols = strings.Split(column, ",")
 	for i := 0; i < len(cols); i++ {
 		cols[i] = addDelimiter(cols[i], 2)
@@ -190,7 +193,7 @@ func (this *builder) Query() *Rows {
 func (this *builder) Delete() int {
 	var sql, params = this.toDeleteSql()
 	this.reset()
-	var res, err = this.db.Exec(sql, params)
+	var res, err = this.db.Exec(sql, params...)
 	if err != nil {
 		return -1
 	}
