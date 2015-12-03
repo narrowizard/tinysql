@@ -22,10 +22,15 @@ type whereConstraint struct {
 	extChar         int
 }
 
+type joinModel struct {
+	table     string
+	condition string
+}
+
 type builder struct {
 	from           []string
 	columns        []string
-	join           map[string]string
+	join           []joinModel
 	groupby        []string
 	having         []string
 	whereCondition map[string]whereConstraint
@@ -66,7 +71,7 @@ func (this *builder) reset() {
 	this.groupEnd = 0
 	this.distinct = false
 	this.whereCondition = make(map[string]whereConstraint)
-	this.join = make(map[string]string)
+	this.join = make([]joinModel, 0, 0)
 	this.set = make(map[string]interface{})
 }
 
@@ -110,11 +115,11 @@ func (this *builder) toQuerySql() (string, []interface{}) {
 	sql = sql[:len(sql)-1]
 	//join
 	if len(this.join) != 0 {
-		for k, v := range this.join {
+		for i := 0; i < len(this.join); i++ {
 			sql += " join "
-			sql += k
+			sql += this.join[i].table
 			sql += " on "
-			sql += v
+			sql += this.join[i].condition
 		}
 	}
 	//group by
@@ -446,7 +451,8 @@ func (this *builder) SelectSum(col string) *builder {
 
 func (this *builder) Join(table string, condition string) *builder {
 	table = addDelimiter(table, 2)
-	this.join[table] = condition
+	var jc = joinModel{table: table, condition: condition}
+	this.join = append(this.join, jc)
 	return this
 }
 
