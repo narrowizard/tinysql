@@ -14,6 +14,7 @@ type countModel struct {
 }
 
 type whereConstraint struct {
+	column          string
 	multiValue      bool
 	value           interface{}
 	values          []interface{}
@@ -27,20 +28,25 @@ type joinModel struct {
 	condition string
 }
 
+type setModel struct {
+	column string
+	value  interface{}
+}
+
 type builder struct {
 	from           []string
 	columns        []string
 	join           []joinModel
 	groupby        []string
 	having         []string
-	whereCondition map[string]whereConstraint
+	whereCondition []whereConstraint
 	distinct       bool
 	limit          int
 	offset         int
 	orderby        []string
 	groupStart     int
 	groupEnd       int
-	set            map[string]interface{}
+	set            []setModel
 	db             *DB
 }
 
@@ -70,9 +76,9 @@ func (this *builder) reset() {
 	this.groupStart = 0
 	this.groupEnd = 0
 	this.distinct = false
-	this.whereCondition = make(map[string]whereConstraint)
+	this.whereCondition = make([]whereConstraint, 0, 0)
 	this.join = make([]joinModel, 0, 0)
-	this.set = make(map[string]interface{})
+	this.set = make([]setModel, 0, 0)
 }
 
 func (this *builder) OrderBy(column string) *builder {
@@ -128,7 +134,8 @@ func (this *builder) toQuerySql() (string, []interface{}) {
 	if len(this.whereCondition) != 0 {
 		sql += " where "
 		isFirst := true
-		for k, v := range this.whereCondition {
+		for i := 0; i < len(this.whereCondition); i++ {
+			var v = this.whereCondition[i]
 			//where group
 			if v.extCharPosition == 1 {
 				sql += " "
@@ -149,13 +156,13 @@ func (this *builder) toQuerySql() (string, []interface{}) {
 				}
 			}
 			if v.multiValue {
-				sql += (k + " in (")
+				sql += (v.column + " in (")
 				sql += strings.Repeat("?,", len(v.values))
 				sql = sql[:len(sql)-1]
 				sql += (") ")
 				params = append(params, v.values...)
 			} else {
-				sql += (k + "? ")
+				sql += (v.column + "? ")
 				params = append(params, v.value)
 			}
 			// where group
@@ -217,15 +224,16 @@ func (this *builder) Update(table string) int {
 	}
 	var sql = "update `" + table + "` set "
 	var params = make([]interface{}, 0, 0)
-	for k, v := range this.set {
-		sql += (k + "=?,")
-		params = append(params, v)
+	for i := 0; i < len(this.set); i++ {
+		sql += (this.set[i].column + "=?,")
+		params = append(params, this.set[i].value)
 	}
 	sql = sql[:len(sql)-1]
 	if len(this.whereCondition) != 0 {
 		sql += " where "
 		var isFirst = true
-		for k, v := range this.whereCondition {
+		for i := 0; i < len(this.whereCondition); i++ {
+			var v = this.whereCondition[i]
 			//where group
 			if v.extCharPosition == 1 {
 				sql += " "
@@ -246,13 +254,13 @@ func (this *builder) Update(table string) int {
 				}
 			}
 			if v.multiValue {
-				sql += (k + " in (")
+				sql += (v.column + " in (")
 				sql += strings.Repeat("?,", len(v.values))
 				sql = sql[:len(sql)-1]
 				sql += (") ")
 				params = append(params, v.values...)
 			} else {
-				sql += (k + "? ")
+				sql += (v.column + "? ")
 				params = append(params, v.value)
 			}
 			// where group
@@ -322,7 +330,8 @@ func (this *builder) Set(key string, value interface{}) *builder {
 		return this
 	}
 	key = "`" + key + "`"
-	this.set[key] = value
+	var temp = setModel{column: key, value: value}
+	this.set = append(this.set, temp)
 	return this
 }
 
@@ -336,7 +345,8 @@ func (this *builder) toDeleteSql() (string, []interface{}) {
 	if len(this.whereCondition) != 0 {
 		sql += " where "
 		isFirst := true
-		for k, v := range this.whereCondition {
+		for i := 0; i < len(this.whereCondition); i++ {
+			var v = this.whereCondition[i]
 			//where group
 			if v.extCharPosition == 1 {
 				sql += " "
@@ -357,13 +367,13 @@ func (this *builder) toDeleteSql() (string, []interface{}) {
 				}
 			}
 			if v.multiValue {
-				sql += (k + " in (")
+				sql += (v.column + " in (")
 				sql += strings.Repeat("?,", len(v.values))
 				sql = sql[:len(sql)-1]
 				sql += (") ")
 				params = append(params, v.values...)
 			} else {
-				sql += (k + "? ")
+				sql += (v.column + "? ")
 				params = append(params, v.value)
 			}
 			// where group
@@ -549,7 +559,8 @@ func (this *builder) where(key string, val interface{}, t string) *builder {
 	} else {
 		aa.extCharPosition = 0
 	}
-	this.whereCondition[key] = *aa
+	aa.column = key
+	this.whereCondition = append(this.whereCondition, *aa)
 	return this
 }
 
@@ -577,7 +588,8 @@ func (this *builder) whereIn(key string, val []interface{}, t string) *builder {
 	//处理限定,如database.table.column
 
 	key = addDelimiter(key, 1)
-	this.whereCondition[key] = *aa
+	aa.column = key
+	this.whereCondition = append(this.whereCondition, *aa)
 	return this
 }
 
