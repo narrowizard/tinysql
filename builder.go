@@ -87,7 +87,7 @@ func (this *builder) OrderBy(column string) *builder {
 	}
 	var cols = strings.Split(column, ",")
 	for i := 0; i < len(cols); i++ {
-		cols[i] = addDelimiter(cols[i], 2)
+		cols[i] = addDelimiter(cols[i], 3)
 	}
 	this.orderby = append(this.orderby, cols...)
 	return this
