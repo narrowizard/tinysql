@@ -26,6 +26,7 @@ type whereConstraint struct {
 type joinModel struct {
 	table     string
 	condition string
+	joinType  string
 }
 
 type setModel struct {
@@ -122,6 +123,7 @@ func (this *builder) toQuerySql() (string, []interface{}) {
 	//join
 	if len(this.join) != 0 {
 		for i := 0; i < len(this.join); i++ {
+			sql += this.join[i].joinType
 			sql += " join "
 			sql += this.join[i].table
 			sql += " on "
@@ -459,9 +461,23 @@ func (this *builder) SelectSum(col string) *builder {
 	return this.maxMinAvgSum(col, "sum")
 }
 
+func (this *builder) LeftJoin(table string, condition string) *builder {
+	table = addDelimiter(table, 2)
+	var jc = joinModel{table: table, condition: condition, joinType: " left "}
+	this.join = append(this.join, jc)
+	return this
+}
+
+func (this *builder) RightJoin(table string, condition string) *builder {
+	table = addDelimiter(table, 2)
+	var jc = joinModel{table: table, condition: condition, joinType: " right "}
+	this.join = append(this.join, jc)
+	return this
+}
+
 func (this *builder) Join(table string, condition string) *builder {
 	table = addDelimiter(table, 2)
-	var jc = joinModel{table: table, condition: condition}
+	var jc = joinModel{table: table, condition: condition, joinType: ""}
 	this.join = append(this.join, jc)
 	return this
 }
