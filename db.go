@@ -19,6 +19,20 @@ func (this *DB) NewBuilder() *builder {
 	return b
 }
 
+// Call 调用存储过程
+func (this *DB) Call(procedure string, params ...interface{}) *Rows {
+	var sql = "call " + procedure + "("
+	for i := 0; i < len(params); i++ {
+		sql += "?,"
+	}
+	if len(params) != 0 {
+		sql = sql[:len(sql)-1]
+	}
+	sql += ")"
+	var rows, err = this.db.Query(sql, params...)
+	return &Rows{rows, err, nil}
+}
+
 // Query 查询sql
 func (this *DB) Query(sql string, params ...interface{}) *Rows {
 	var rows, err = this.db.Query(sql, params...)
