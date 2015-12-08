@@ -418,8 +418,11 @@ func (this *builder) Count(reset bool) int {
 	//去掉limit
 	var aa, _ = regexp.Compile("limit \\d+,\\d+")
 	sql = aa.ReplaceAllString(sql, "")
-	this.db.Query(sql, params...).Scan(&c)
-	this.columns = temp
+	var _, err = this.db.Query(sql, params...).Scan(&c)
+	if err != nil {
+		this.columns = temp
+		return -1
+	}
 	if reset {
 		this.reset()
 	}
