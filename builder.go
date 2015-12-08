@@ -423,6 +423,7 @@ func (this *builder) Count(reset bool) int {
 		this.columns = temp
 		return -1
 	}
+	this.columns = temp
 	if reset {
 		this.reset()
 	}
