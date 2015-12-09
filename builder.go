@@ -498,6 +498,12 @@ func (this *builder) GroupBy(col string) *builder {
 	return this
 }
 
+func (this *builder) GroupConcat(col string, alias string) *builder {
+	var c = addDelimiter(col, 1)
+	this.columns = append(this.columns, c+" "+alias)
+	return this
+}
+
 // Having 暂未实现
 func (this *builder) Having(col string, value interface{}) *builder {
 	return this
