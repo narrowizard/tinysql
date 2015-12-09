@@ -500,7 +500,7 @@ func (this *builder) GroupBy(col string) *builder {
 
 func (this *builder) GroupConcat(col string, alias string) *builder {
 	var c = addDelimiter(col, 1)
-	this.columns = append(this.columns, c+" "+alias)
+	this.columns = append(this.columns, "group_concat("+c+") "+alias)
 	return this
 }
 
