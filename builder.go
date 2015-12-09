@@ -130,8 +130,6 @@ func (this *builder) toQuerySql() (string, []interface{}) {
 			sql += this.join[i].condition
 		}
 	}
-	//group by
-
 	// where
 	if len(this.whereCondition) != 0 {
 		sql += " where "
@@ -176,6 +174,14 @@ func (this *builder) toQuerySql() (string, []interface{}) {
 	}
 	if this.groupEnd != 0 {
 		sql += strings.Repeat(")", this.groupEnd)
+	}
+	//group by
+	if len(this.groupby) != 0 {
+		sql += " group by "
+		for i := 0; i < len(this.groupby); i++ {
+			sql += this.groupby[i] + ","
+		}
+		sql = sql[:len(sql)-1]
 	}
 	//order by
 	if len(this.orderby) != 0 {
@@ -486,10 +492,16 @@ func (this *builder) Join(table string, condition string) *builder {
 	return this
 }
 
-//func (this *Builder) GroupBy(col string) *Builder{
+func (this *builder) GroupBy(col string) *builder {
+	var c = addDelimiter(col, 1)
+	this.groupby = append(this.groupby, c)
+	return this
+}
 
-//	return this
-//}
+// Having 暂未实现
+func (this *builder) Having(col string, value interface{}) *builder {
+	return this
+}
 
 func (this *builder) GroupStart() *builder {
 	this.groupStart++
