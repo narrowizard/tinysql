@@ -29,7 +29,14 @@ func (this *DB) Call(procedure string, params ...interface{}) *Rows {
 		sql = sql[:len(sql)-1]
 	}
 	sql += ")"
+
 	var rows, err = this.db.Query(sql, params...)
+	if err != nil {
+		rows, err = this.db.Query(sql, params...)
+	}
+	if err != nil {
+		return &Rows{rows, err, nil}
+	}
 	return &Rows{rows, err, nil}
 }
 

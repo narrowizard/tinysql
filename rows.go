@@ -153,7 +153,7 @@ func (this *Rows) Scan(data interface{}) (int, error) {
 			}
 			d.SetBack(n)
 		}
-		this.rows.Close()
+		err = this.rows.Close()
 		return d.length, nil
 	}
 	return 0, this.err
