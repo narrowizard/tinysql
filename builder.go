@@ -231,12 +231,18 @@ func (this *builder) Update(table string) int {
 		return -1
 	}
 	var sql = "update `" + table + "` set "
+	// set
 	var params = make([]interface{}, 0, 0)
 	for i := 0; i < len(this.set); i++ {
-		sql += (this.set[i].column + "=?,")
+		if strings.Contains(this.set[i].column, "=") {
+			sql += (this.set[i].column + ",")
+		} else {
+			sql += (this.set[i].column + "=?,")
+		}
 		params = append(params, this.set[i].value)
 	}
 	sql = sql[:len(sql)-1]
+	// where
 	if len(this.whereCondition) != 0 {
 		sql += " where "
 		var isFirst = true
