@@ -535,12 +535,12 @@ func (this *builder) Select(columns string) *builder {
 	if len(s) == 0 {
 		return this
 	}
-	for i := 0; i < len(s); i++ {
-		if s[i] == "*" {
-			continue
-		}
-		s[i] = addDelimiter(s[i], 3)
-	}
+	//	for i := 0; i < len(s); i++ {
+	//		if s[i] == "*" {
+	//			continue
+	//		}
+	//		s[i] = addDelimiter(s[i], 3)
+	//	}
 	this.columns = append(this.columns, s...)
 	return this
 }
