@@ -209,6 +209,15 @@ func (this *builder) Query() *Rows {
 	return this.db.Query(sql, params...)
 }
 
+func (this *builder) Exec(sql string, params ...interface{}) int64 {
+	res, err := this.db.Exec(sql, params)
+	if err != nil {
+		return -1
+	}
+	var affects, _ = res.RowsAffected()
+	return affects
+}
+
 // Delete 执行删除方法,返回影响行数
 func (this *builder) Delete() int {
 	var sql, params = this.toDeleteSql()
