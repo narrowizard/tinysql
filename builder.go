@@ -288,8 +288,10 @@ func (this *builder) Update(table string) int {
 		}
 	}
 	this.reset()
+	fmt.Println("[TinySql]", sql)
 	var result, err = this.db.Exec(sql, params...)
 	if err != nil {
+		fmt.Println("[TinySql]", err.Error())
 		return -1
 	}
 	var c int64
@@ -326,8 +328,10 @@ func (this *builder) Insert(table string, model interface{}) int {
 	var result sql.Result
 	var err error
 	this.reset()
+	fmt.Println("[TinySql]", query)
 	result, err = this.db.Exec(query, params...)
 	if err != nil {
+		fmt.Println("[TinySql]", err.Error())
 		return -1
 	}
 	var id int64
@@ -343,7 +347,7 @@ func (this *builder) Set(key string, value interface{}) *builder {
 	if strings.Trim(key, " ") == "" {
 		return this
 	}
-	key = "`" + key + "`"
+	//key = "`" + key + "`"
 	var temp = setModel{column: key, value: value}
 	this.set = append(this.set, temp)
 	return this
