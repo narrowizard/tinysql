@@ -210,8 +210,9 @@ func (this *builder) Query() *Rows {
 }
 
 func (this *builder) Exec(sql string, params ...interface{}) int64 {
-	res, err := this.db.Exec(sql, params)
+	res, err := this.db.Exec(sql, params...)
 	if err != nil {
+		fmt.Println(err.Error())
 		return -1
 	}
 	var affects, _ = res.RowsAffected()
