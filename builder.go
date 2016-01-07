@@ -427,9 +427,9 @@ func (this *builder) From(table string) *builder {
 	if len(t) == 0 {
 		return this
 	}
-	for i := 0; i < len(t); i++ {
-		t[i] = addDelimiter(t[i], 2)
-	}
+	//	for i := 0; i < len(t); i++ {
+	//		t[i] = addDelimiter(t[i], 2)
+	//	}
 	this.from = append(this.from, t...)
 	return this
 }
@@ -492,21 +492,21 @@ func (this *builder) SelectSum(col string) *builder {
 }
 
 func (this *builder) LeftJoin(table string, condition string) *builder {
-	table = addDelimiter(table, 2)
+	//	table = addDelimiter(table, 2)
 	var jc = joinModel{table: table, condition: condition, joinType: " left "}
 	this.join = append(this.join, jc)
 	return this
 }
 
 func (this *builder) RightJoin(table string, condition string) *builder {
-	table = addDelimiter(table, 2)
+	//	table = addDelimiter(table, 2)
 	var jc = joinModel{table: table, condition: condition, joinType: " right "}
 	this.join = append(this.join, jc)
 	return this
 }
 
 func (this *builder) Join(table string, condition string) *builder {
-	table = addDelimiter(table, 2)
+	//	table = addDelimiter(table, 2)
 	var jc = joinModel{table: table, condition: condition, joinType: ""}
 	this.join = append(this.join, jc)
 	return this
