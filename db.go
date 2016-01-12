@@ -39,8 +39,13 @@ func (this *DB) Call(procedure string, params ...interface{}) *Rows {
 
 // Query 查询sql
 func (this *DB) Query(sql string, params ...interface{}) *Rows {
-	var rows, err = this.db.Query(sql, params...)
-	return &Rows{rows, err, nil}
+	if this.autoCommit {
+		var rows, err = this.db.Query(sql, params...)
+		return &Rows{rows, err, nil}
+	} else {
+		var rows, err = this.tx.Query(sql, params...)
+		return &Rows{rows, err, nil}
+	}
 }
 
 // Exec 执行sql
