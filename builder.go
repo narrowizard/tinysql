@@ -559,6 +559,18 @@ func (this *builder) Where(key string, val interface{}) *builder {
 	return this.where(key, val, "and")
 }
 
+// Like
+// @param t 1:在前面加% 2:在后面加% 3:前后都加%
+func (this *builder) Like(key string, val string, t int) *builder {
+	var aa = new(whereConstraint)
+	aa.column = addDelimiter(key, 1) + " like "
+	aa.isOr = false
+	aa.multiValue = false
+	aa.value = val
+	this.whereCondition = append(this.whereCondition, *aa)
+	return this
+}
+
 func (this *builder) OrWhere(key string, val interface{}) *builder {
 	return this.where(key, val, "or")
 }
