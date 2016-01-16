@@ -9,6 +9,16 @@ import (
 	"strings"
 )
 
+type tableModel struct {
+	name  string
+	alias string
+}
+
+type columnModel struct {
+	name  string
+	alias string
+}
+
 type countModel struct {
 	C int
 }
@@ -35,8 +45,8 @@ type setModel struct {
 }
 
 type builder struct {
-	from           []string
-	columns        []string
+	tables         []tableModel
+	columns        []columnModel
 	join           []joinModel
 	groupby        []string
 	having         []string
@@ -66,8 +76,120 @@ func (this *builder) Rollback() error {
 	return this.db.rollback()
 }
 
+// Query 执行查询
+func (this *builder) Query() *Rows {
+	var sql, params = this.toQuerySql()
+	this.reset()
+	return this.db.Query(sql, params...)
+}
+
+// Exec execute the sql query
+// return rows affected.
+// return -1 when error occurred
+func (this *builder) Exec(sql string, params ...interface{}) int64 {
+	res, err := this.db.Exec(sql, params...)
+	if err != nil {
+		fmt.Println(err.Error())
+		return -1
+	}
+	var affects, _ = res.RowsAffected()
+	return affects
+}
+
+// From 支持以下写法
+// From("table")
+// From("table alias")
+// From("table as alias")
+func (this *builder) From(table string) *builder {
+	if strings.Trim(table, " ") == "" {
+		return this
+	}
+	var ss = strings.Split(table, " ")
+	var temp = new(tableModel)
+	if len(ss) == 2 {
+		temp.alias = ss[1]
+		temp.name = addDelimiter(ss[0], 1)
+	} else if len(ss) == 3 {
+		if ss[1] == "as" {
+			temp.alias = ss[2]
+			temp.name = addDelimiter(ss[0], 1)
+		} else {
+			//格式错误
+			fmt.Println("[TinySql]", "From param error")
+			return this
+		}
+	} else if len(ss) == 1 {
+		temp.name = addDelimiter(ss[0], 1)
+	} else {
+		//格式错误
+		fmt.Println("[TinySql]", "From param error")
+		return this
+	}
+	this.tables = append(this.tables, *temp)
+	return this
+}
+
+// Select 支持逗号分隔的多个列
+// 复杂查询请调用SelectSpec
+func (this *builder) Select(columns string) *builder {
+	s := strings.Split(columns, ",")
+	if len(s) == 0 {
+		return this
+	}
+	var aa, err = regexp.Compile(`([\w()*.]+)((\s*as)?\s*([\w]+))?`)
+	if err != nil {
+		fmt.Println("[TinySql]", err.Error())
+		return this
+	}
+	for _, value := range s {
+		var c = aa.ReplaceAllString(value, `$1|$4`)
+		var temp = new(columnModel)
+		var sp = strings.Split(c, "|")
+		if sp[0] == "*" {
+			temp.name = sp[0]
+		} else {
+			temp.name = addDelimiter(sp[0], 1)
+		}
+		temp.alias = sp[1]
+		this.columns = append(this.columns, *temp)
+	}
+	return this
+}
+
+// SelectSpec 查询某一个特定的列
+// 这里指的是包含函数的查询,如group_concat(concat(c1,c2,c3)) as alias
+func (this *builder) SelectSpec(column string) *builder {
+	var segment = strings.Split(column, " ")
+	var aa, err = regexp.CompilePOSIX(`(?<=[\(,.])\s*([a-zA-Z][\w]*)\s*(?=[\),.])`)
+	if err != nil {
+		fmt.Println("[TinySql]", err.Error())
+		return this
+	}
+	var temp = new(columnModel)
+	var c = aa.ReplaceAllString(segment[0], "`$1`")
+	temp.name = c
+	if len(segment) == 1 {
+
+	} else if len(segment) == 2 {
+		temp.alias = segment[1]
+	} else if len(segment) == 3 {
+		temp.alias = segment[2]
+	}
+	this.columns = append(this.columns, *temp)
+	return this
+}
+
+// Join 连接表
+func (this *builder) Join(table string, condition string) *builder {
+	//	table = addDelimiter(table, 2)
+	var jc = joinModel{table: table, condition: condition, joinType: ""}
+	this.join = append(this.join, jc)
+	return this
+}
+
+// reset current builder's state
 func (this *builder) reset() {
-	this.from = this.from[:0]
+	this.tables = this.tables[:0]
 	this.columns = this.columns[:0]
 	this.groupby = this.groupby[:0]
 	this.having = this.having[:0]
@@ -96,7 +218,7 @@ func (this *builder) OrderBy(column string) *builder {
 
 // toSql 生成sql语句
 func (this *builder) toQuerySql() (string, []interface{}) {
-	if len(this.from) == 0 {
+	if len(this.tables) == 0 {
 		return "", nil
 	}
 	var sql string
@@ -110,14 +232,14 @@ func (this *builder) toQuerySql() (string, []interface{}) {
 		sql += " * "
 	} else {
 		for i := 0; i < len(this.columns); i++ {
-			sql += (this.columns[i] + ",")
+			sql += (this.columns[i].name + " " + this.columns[i].alias + ",")
 		}
 		sql = sql[:len(sql)-1]
 	}
 	// from
 	sql += " from "
-	for i := 0; i < len(this.from); i++ {
-		sql += (this.from[i] + ",")
+	for i := 0; i < len(this.tables); i++ {
+		sql += (this.tables[i].name + " " + this.tables[i].alias + ",")
 	}
 	sql = sql[:len(sql)-1]
 	//join
@@ -200,23 +322,6 @@ func (this *builder) toQuerySql() (string, []interface{}) {
 	}
 	fmt.Println("[TinySql]", sql)
 	return sql, params
-}
-
-// Query 执行查询
-func (this *builder) Query() *Rows {
-	var sql, params = this.toQuerySql()
-	this.reset()
-	return this.db.Query(sql, params...)
-}
-
-func (this *builder) Exec(sql string, params ...interface{}) int64 {
-	res, err := this.db.Exec(sql, params...)
-	if err != nil {
-		fmt.Println(err.Error())
-		return -1
-	}
-	var affects, _ = res.RowsAffected()
-	return affects
 }
 
 // Delete 执行删除方法,返回影响行数
@@ -364,11 +469,11 @@ func (this *builder) Set(key string, value interface{}) *builder {
 }
 
 func (this *builder) toDeleteSql() (string, []interface{}) {
-	if len(this.from) != 1 {
+	if len(this.tables) != 1 {
 		return "", nil
 	}
 	var sql string
-	sql = "delete from " + this.from[0]
+	sql = "delete from " + this.tables[0].name + " " + this.tables[0].alias
 	params := make([]interface{}, 0, 0)
 	if len(this.whereCondition) != 0 {
 		sql += " where "
@@ -418,27 +523,11 @@ func (this *builder) toDeleteSql() (string, []interface{}) {
 	return sql, params
 }
 
-// From 设置查询的表,支持逗号分隔的多个表
-func (this *builder) From(table string) *builder {
-	if strings.Trim(table, " ") == "" {
-		return this
-	}
-	t := strings.Split(table, ",")
-	if len(t) == 0 {
-		return this
-	}
-	//	for i := 0; i < len(t); i++ {
-	//		t[i] = addDelimiter(t[i], 2)
-	//	}
-	this.from = append(this.from, t...)
-	return this
-}
-
 // Count 返回符合条件的结果数量
 // @param reset 查询完成后是否重置
 func (this *builder) Count(reset bool) int {
 	var temp = this.columns
-	this.columns = []string{"count(*) as c"}
+	this.columns = []columnModel{columnModel{name: "Count(*) as c"}}
 	var c countModel
 	var sql, params = this.toQuerySql()
 	//去掉limit
@@ -459,9 +548,9 @@ func (this *builder) Count(reset bool) int {
 // SelectCount 搜索某个字段的Count值
 func (this *builder) SelectCount(col string) *builder {
 	if col == "*" {
-		this.columns = append(this.columns, "count(*)")
+		this.columns = append(this.columns, columnModel{name: "count(*)"})
 	} else if strings.Trim(col, " ") == "" {
-		this.columns = append(this.columns, "count(1)")
+		this.columns = append(this.columns, columnModel{name: "count(1)"})
 	} else {
 		if strings.Contains(col, ".") {
 			var df = strings.Split(col, ".")
@@ -470,7 +559,7 @@ func (this *builder) SelectCount(col string) *builder {
 				col += "`" + df[j] + "`" + "."
 			}
 		}
-		this.columns = append(this.columns, "count(`"+col[:len(col)-1]+"`)")
+		this.columns = append(this.columns, columnModel{name: "count(`" + col[:len(col)-1] + "`)"})
 	}
 	return this
 }
@@ -505,13 +594,6 @@ func (this *builder) RightJoin(table string, condition string) *builder {
 	return this
 }
 
-func (this *builder) Join(table string, condition string) *builder {
-	//	table = addDelimiter(table, 2)
-	var jc = joinModel{table: table, condition: condition, joinType: ""}
-	this.join = append(this.join, jc)
-	return this
-}
-
 func (this *builder) GroupBy(col string) *builder {
 	var c = addDelimiter(col, 1)
 	this.groupby = append(this.groupby, c)
@@ -520,7 +602,7 @@ func (this *builder) GroupBy(col string) *builder {
 
 func (this *builder) GroupConcat(col string, alias string) *builder {
 	var c = addDelimiter(col, 1)
-	this.columns = append(this.columns, "group_concat("+c+") "+alias)
+	this.columns = append(this.columns, columnModel{name: "group_concat(" + c + ") " + alias})
 	return this
 }
 
@@ -536,22 +618,6 @@ func (this *builder) GroupStart() *builder {
 
 func (this *builder) GroupEnd() *builder {
 	this.groupEnd++
-	return this
-}
-
-// Select 支持逗号分隔的多个列
-func (this *builder) Select(columns string) *builder {
-	s := strings.Split(columns, ",")
-	if len(s) == 0 {
-		return this
-	}
-	//	for i := 0; i < len(s); i++ {
-	//		if s[i] == "*" {
-	//			continue
-	//		}
-	//		s[i] = addDelimiter(s[i], 3)
-	//	}
-	this.columns = append(this.columns, s...)
 	return this
 }
 
@@ -593,7 +659,7 @@ func (this *builder) maxMinAvgSum(col string, t string) *builder {
 	if strings.Trim(col, " ") == "" {
 		return this
 	}
-	this.columns = append(this.columns, t+"(`"+col+"`)")
+	this.columns = append(this.columns, columnModel{name: t + "(`" + col + "`)"})
 	return this
 }
 
