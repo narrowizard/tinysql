@@ -34,7 +34,8 @@ type whereConstraint struct {
 }
 
 type joinModel struct {
-	table     string
+	name      string
+	alias     string
 	condition string
 	joinType  string
 }
@@ -47,7 +48,7 @@ type setModel struct {
 type builder struct {
 	tables         []tableModel
 	columns        []columnModel
-	join           []joinModel
+	joins          []joinModel
 	groupby        []string
 	having         []string
 	whereCondition []whereConstraint
@@ -158,32 +159,65 @@ func (this *builder) Select(columns string) *builder {
 
 // SelectSpec 查询某一个特定的列
 // 这里指的是包含函数的查询,如group_concat(concat(c1,c2,c3)) as alias
-func (this *builder) SelectSpec(column string) *builder {
-	var segment = strings.Split(column, " ")
-	var aa, err = regexp.CompilePOSIX(`(?<=[\(,.])\s*([a-zA-Z][\w]*)\s*(?=[\),.])`)
-	if err != nil {
-		fmt.Println("[TinySql]", err.Error())
-		return this
-	}
+// 如果列名包含关键词,请自行加关键词限定符
+func (this *builder) SelectSpec(column string, alias string) *builder {
 	var temp = new(columnModel)
-	var c = aa.ReplaceAllString(segment[0], "`$1`")
-	temp.name = c
-	if len(segment) == 1 {
-
-	} else if len(segment) == 2 {
-		temp.alias = segment[1]
-	} else if len(segment) == 3 {
-		temp.alias = segment[2]
-	}
+	temp.name = column
+	temp.alias = alias
 	this.columns = append(this.columns, *temp)
 	return this
 }
 
+// SelectCount 搜索某个字段的Count值
+func (this *builder) SelectCount(col string, alias string) *builder {
+	if col == "*" {
+		this.columns = append(this.columns, columnModel{name: "count(*)", alias: alias})
+	} else if strings.Trim(col, " ") == "" {
+		this.columns = append(this.columns, columnModel{name: "count(1)", alias: alias})
+	} else {
+		if strings.Contains(col, ".") {
+			var df = strings.Split(col, ".")
+			col = ""
+			for j := 0; j < len(df); j++ {
+				col += "`" + df[j] + "`" + "."
+			}
+		}
+		this.columns = append(this.columns, columnModel{name: "count(" + col[:len(col)-1] + ")", alias: alias})
+	}
+	return this
+}
+
+func (this *builder) SelectMax(col string, alias string) *builder {
+	return this.maxMinAvgSum(col, "max", alias)
+}
+
+func (this *builder) SelectMin(col string, alias string) *builder {
+	return this.maxMinAvgSum(col, "min", alias)
+}
+
+func (this *builder) SelectAvg(col string, alias string) *builder {
+	return this.maxMinAvgSum(col, "avg", alias)
+}
+
+func (this *builder) SelectSum(col string, alias string) *builder {
+	return this.maxMinAvgSum(col, "sum", alias)
+}
+
 // Join 连接表
 func (this *builder) Join(table string, condition string) *builder {
-	//	table = addDelimiter(table, 2)
-	var jc = joinModel{table: table, condition: condition, joinType: ""}
-	this.join = append(this.join, jc)
+	return this.join(table, condition, "")
+}
+
+func (this *builder) LeftJoin(table string, condition string) *builder {
+	return this.join(table, condition, "left ")
+}
+
+func (this *builder) RightJoin(table string, condition string) *builder {
+	return this.join(table, condition, "right ")
+}
+
+func (this *builder) Distinct() *builder {
+	this.distinct = true
 	return this
 }
 
@@ -200,7 +234,7 @@ func (this *builder) reset() {
 	this.groupEnd = 0
 	this.distinct = false
 	this.whereCondition = make([]whereConstraint, 0, 0)
-	this.join = make([]joinModel, 0, 0)
+	this.joins = make([]joinModel, 0, 0)
 	this.set = make([]setModel, 0, 0)
 }
 
@@ -242,14 +276,17 @@ func (this *builder) toQuerySql() (string, []interface{}) {
 		sql += (this.tables[i].name + " " + this.tables[i].alias + ",")
 	}
 	sql = sql[:len(sql)-1]
+	sql += " "
 	//join
-	if len(this.join) != 0 {
-		for i := 0; i < len(this.join); i++ {
-			sql += this.join[i].joinType
+	if len(this.joins) != 0 {
+		for i := 0; i < len(this.joins); i++ {
+			sql += this.joins[i].joinType
 			sql += " join "
-			sql += this.join[i].table
+			sql += this.joins[i].name
+			sql += " "
+			sql += this.joins[i].alias
 			sql += " on "
-			sql += this.join[i].condition
+			sql += this.joins[i].condition
 		}
 	}
 	// where
@@ -525,6 +562,7 @@ func (this *builder) toDeleteSql() (string, []interface{}) {
 
 // Count 返回符合条件的结果数量
 // @param reset 查询完成后是否重置
+// 注意:使用group by之后该函数失效
 func (this *builder) Count(reset bool) int {
 	var temp = this.columns
 	this.columns = []columnModel{columnModel{name: "Count(*) as c"}}
@@ -545,55 +583,6 @@ func (this *builder) Count(reset bool) int {
 	return c.C
 }
 
-// SelectCount 搜索某个字段的Count值
-func (this *builder) SelectCount(col string) *builder {
-	if col == "*" {
-		this.columns = append(this.columns, columnModel{name: "count(*)"})
-	} else if strings.Trim(col, " ") == "" {
-		this.columns = append(this.columns, columnModel{name: "count(1)"})
-	} else {
-		if strings.Contains(col, ".") {
-			var df = strings.Split(col, ".")
-			col = ""
-			for j := 0; j < len(df); j++ {
-				col += "`" + df[j] + "`" + "."
-			}
-		}
-		this.columns = append(this.columns, columnModel{name: "count(`" + col[:len(col)-1] + "`)"})
-	}
-	return this
-}
-
-func (this *builder) SelectMax(col string) *builder {
-	return this.maxMinAvgSum(col, "max")
-}
-
-func (this *builder) SelectMin(col string) *builder {
-	return this.maxMinAvgSum(col, "min")
-}
-
-func (this *builder) SelectAvg(col string) *builder {
-	return this.maxMinAvgSum(col, "avg")
-}
-
-func (this *builder) SelectSum(col string) *builder {
-	return this.maxMinAvgSum(col, "sum")
-}
-
-func (this *builder) LeftJoin(table string, condition string) *builder {
-	//	table = addDelimiter(table, 2)
-	var jc = joinModel{table: table, condition: condition, joinType: " left "}
-	this.join = append(this.join, jc)
-	return this
-}
-
-func (this *builder) RightJoin(table string, condition string) *builder {
-	//	table = addDelimiter(table, 2)
-	var jc = joinModel{table: table, condition: condition, joinType: " right "}
-	this.join = append(this.join, jc)
-	return this
-}
-
 func (this *builder) GroupBy(col string) *builder {
 	var c = addDelimiter(col, 1)
 	this.groupby = append(this.groupby, c)
@@ -602,7 +591,7 @@ func (this *builder) GroupBy(col string) *builder {
 
 func (this *builder) GroupConcat(col string, alias string) *builder {
 	var c = addDelimiter(col, 1)
-	this.columns = append(this.columns, columnModel{name: "group_concat(" + c + ") " + alias})
+	this.columns = append(this.columns, columnModel{name: "group_concat(" + c + ") ", alias: alias})
 	return this
 }
 
@@ -627,7 +616,7 @@ func (this *builder) Where(key string, val interface{}) *builder {
 
 // Like
 // @param t 1:在前面加% 2:在后面加% 3:前后都加%
-func (this *builder) Like(key string, val string, t int) *builder {
+func (this *builder) Like(key string, val string) *builder {
 	var aa = new(whereConstraint)
 	aa.column = addDelimiter(key, 1) + " like "
 	aa.isOr = false
@@ -655,19 +644,50 @@ func (this *builder) Limit(limit int, offset int) *builder {
 	return this
 }
 
-func (this *builder) maxMinAvgSum(col string, t string) *builder {
+func (this *builder) join(table string, condition string, t string) *builder {
+	if strings.Trim(table, " ") == "" {
+		return this
+	}
+	var segment = strings.Split(table, " ")
+	var jm = new(joinModel)
+	jm.name = addDelimiter(segment[0], 1)
+	if len(segment) == 1 {
+
+	} else if len(segment) == 2 {
+		jm.alias = segment[1]
+	} else if len(segment) == 3 {
+		if segment[1] == "as" {
+			jm.alias = segment[2]
+		}
+	}
+	jm.condition = condition
+	jm.joinType = t
+	this.joins = append(this.joins, *jm)
+	return this
+}
+
+func (this *builder) maxMinAvgSum(col string, t string, alias string) *builder {
 	if strings.Trim(col, " ") == "" {
 		return this
 	}
-	this.columns = append(this.columns, columnModel{name: t + "(`" + col + "`)"})
+	if strings.Contains(col, ".") {
+		var df = strings.Split(col, ".")
+		col = ""
+		for j := 0; j < len(df); j++ {
+			col += "`" + df[j] + "`" + "."
+		}
+	} else {
+		col += "."
+	}
+	this.columns = append(this.columns, columnModel{name: t + "(" + col[:len(col)-1] + ")", alias: alias})
 	return this
 }
 
 func (this *builder) where(key string, val interface{}, t string) *builder {
-	ext := strings.ContainsAny(key, "<=>")
+	ext := strings.ContainsAny(key, "!<=>")
 	if ext {
-		var p = strings.IndexAny(key, "<=>")
-		var keyName = key[:p]
+		var p = strings.IndexAny(key, "!<=>")
+		var keyName = strings.Trim(key[:p], " ")
 		var symbol = key[p:]
 		//处理限定,如database.table.column
 		key = addDelimiter(keyName, 1) + symbol
