@@ -57,6 +57,18 @@ func (this *DB) Exec(sql string, params ...interface{}) (sql.Result, error) {
 	}
 }
 
+func (this *DB) Begin() bool {
+	return this.begin()
+}
+
+func (this *DB) Commit() error {
+	return this.commit()
+}
+
+func (this *DB) Rollback() error {
+	return this.rollback()
+}
+
 // Begin 开始事务
 func (this *DB) begin() bool {
 	var err error
