@@ -202,6 +202,10 @@ func (this *builder) toQuerySql() (string, []interface{}) {
 	return sql, params
 }
 
+func (this *builder) QuerySql(sql string, params ...interface{}) *Rows {
+	return this.db.Query(sql, params...)
+}
+
 // Query 执行查询
 func (this *builder) Query() *Rows {
 	var sql, params = this.toQuerySql()
