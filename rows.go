@@ -11,6 +11,8 @@ type Rows struct {
 	rows    *sql.Rows
 	err     error
 	columns map[string]int
+	sql     string
+	params  interface{}
 }
 
 // parse 解析fields值到value中
@@ -149,6 +151,7 @@ func (this *Rows) Scan(data interface{}) (int, error) {
 			var n = d.New()
 			this.err = this.scan(n)
 			if this.err != nil {
+				createLog("Scan 行解析错误", this.sql, this.err.Error(), this.params)
 				return 0, this.err
 			}
 			d.SetBack(n)
@@ -156,6 +159,7 @@ func (this *Rows) Scan(data interface{}) (int, error) {
 		err = this.rows.Close()
 		return d.length, nil
 	}
+	createLog("Scan错误", this.sql, this.err.Error(), this.params)
 	return 0, this.err
 }
 

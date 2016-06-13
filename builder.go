@@ -216,6 +216,7 @@ func (this *builder) Query() *Rows {
 func (this *builder) Exec(sql string, params ...interface{}) int64 {
 	res, err := this.db.Exec(sql, params...)
 	if err != nil {
+		createLog("Exec错误", sql, err.Error(), params)
 		fmt.Println(err.Error())
 		return -1
 	}
@@ -229,6 +230,7 @@ func (this *builder) Delete() int {
 	this.reset()
 	var res, err = this.db.Exec(sql, params...)
 	if err != nil {
+		createLog("Delete错误", sql, err.Error(), params)
 		return -1
 	}
 	var c int64
@@ -305,6 +307,7 @@ func (this *builder) Update(table string) int {
 	fmt.Println("[TinySql]", sql)
 	var result, err = this.db.Exec(sql, params...)
 	if err != nil {
+		createLog("Update错误", sql, err.Error(), params)
 		fmt.Println("[TinySql]", err.Error())
 		return -1
 	}
@@ -345,6 +348,7 @@ func (this *builder) Insert(table string, model interface{}) int {
 	fmt.Println("[TinySql]", query)
 	result, err = this.db.Exec(query, params...)
 	if err != nil {
+		createLog("Insert错误", query, err.Error(), params)
 		fmt.Println("[TinySql]", err.Error())
 		return -1
 	}

@@ -34,17 +34,17 @@ func (this *DB) Call(procedure string, params ...interface{}) *Rows {
 	if err != nil {
 		rows, err = this.db.Query(sql, params...)
 	}
-	return &Rows{rows, err, nil}
+	return &Rows{rows, err, nil, sql, params}
 }
 
 // Query 查询sql
 func (this *DB) Query(sql string, params ...interface{}) *Rows {
 	if this.autoCommit {
 		var rows, err = this.db.Query(sql, params...)
-		return &Rows{rows, err, nil}
+		return &Rows{rows, err, nil, sql, params}
 	} else {
 		var rows, err = this.tx.Query(sql, params...)
-		return &Rows{rows, err, nil}
+		return &Rows{rows, err, nil, sql, params}
 	}
 }
 
