@@ -51,9 +51,17 @@ func (this *DB) Query(sql string, params ...interface{}) *Rows {
 // Exec 执行sql
 func (this *DB) Exec(sql string, params ...interface{}) (sql.Result, error) {
 	if this.autoCommit {
-		return this.db.Exec(sql, params...)
+		var result, err = this.db.Exec(sql, params...)
+		if err != nil {
+			createLog("Exec 执行错误", sql, err.Error(), params)
+		}
+		return result, err
 	} else {
-		return this.tx.Exec(sql, params...)
+		var result, err = this.tx.Exec(sql, params...)
+		if err != nil {
+			createLog("Exec 执行错误", sql, err.Error(), params)
+		}
+		return result, err
 	}
 }
 
